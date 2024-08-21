@@ -1,0 +1,20 @@
+server:
+  port: 8000
+  tomcat:
+    uri-encoding: UTF-8
+
+  # DB Setting
+  datasource:
+    url: jdbc:mariadb://localhost:3306/test
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: root
+    password: 1234
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+api:
+  key: n7N%2B3aBxNLrufQBhQy3Qjoil4plFypWhh5t8Kezj0DMwpL3zpSfVPUdPewyJH1UxwHwpaohOc%2FxFy72%2Bg93c4g%3D%3D
+  serviceKey: n7N%2B3aBxNLrufQBhQy3Qjoil4plFypWhh5t8Kezj0DMwpL3zpSfVPUdPewyJH1UxwHwpaohOc%2FxFy72%2Bg93c4g%3D%3D
