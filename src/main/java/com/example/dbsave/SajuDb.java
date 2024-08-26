@@ -12,9 +12,9 @@ import lombok.*;
 @Table(name = "SajuDb")
 public class SajuDb {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "apiId")
-    private Long apiId;  // int 대신 Long 사용
+    private Long apiId;  //
 
     @Column(name="solJd")
     private String solJd;

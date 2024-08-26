@@ -1,7 +1,5 @@
 package com.example.dbsave;
 
-import com.example.dbsave.SajuDb;
-import com.example.dbsave.SajuInfoRepository;
 import org.json.JSONObject;
 import org.json.XML;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,20 +20,17 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class MaridDBSave {
 
-    @Value("${api.key}")
-    private String apiKey;
-    String serviceKey = apiKey; // 공공데이터 API 키
+    @Value("${api.serviceKey}")
+    private String apiKey; // 공공데이터 API 키
 
-    public List<SajuDb> sajuDbList = new ArrayList<>();
+    private List<SajuDb> sajuDbList = new ArrayList<>();
 
     @Autowired
     private SajuInfoRepository sajuInfoRepository;
 
-    public static void main(String[] args) throws IOException {
-        MaridDBSave maridDBSave = new MaridDBSave();
-
-        for (int i = 1950; i < 2050; i++) {
-            maridDBSave.fetchAndSaveYearData(i);
+    public void start() throws IOException {
+        for (int i = 1950; i < 2050; i++) { //10년씩 끊어서 데이터 받아오기
+            fetchAndSaveYearData(i);
             System.out.println("저장시작연도 " + i);
         }
     }
@@ -49,9 +44,10 @@ public class MaridDBSave {
         }
         try {
             sajuInfoRepository.saveAll(sajuDbList);
+            sajuInfoRepository.flush();  // 즉시 데이터베이스에 반영 -> 확인 해보기
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println(e);
+            System.out.println("Save Error: " + e.getMessage());
         }
     }
 
@@ -72,9 +68,8 @@ public class MaridDBSave {
     }
 
     private String buildUrl(int lunYear, int lunMonth, int lunDay) throws UnsupportedEncodingException {
-
         StringBuilder urlBuilder = new StringBuilder("http://apis.data.go.kr/B090041/openapi/service/LrsrCldInfoService/getLunCalInfo");
-        urlBuilder.append("?" + URLEncoder.encode("serviceKey", "UTF-8") + "=" + serviceKey);
+        urlBuilder.append("?" + URLEncoder.encode("serviceKey", "UTF-8") + "=" + URLEncoder.encode(apiKey, "UTF-8"));
         urlBuilder.append("&" + URLEncoder.encode("solYear", "UTF-8") + "=" + URLEncoder.encode(String.format("%d", lunYear), "UTF-8"));
         urlBuilder.append("&" + URLEncoder.encode("solMonth", "UTF-8") + "=" + URLEncoder.encode(String.format("%02d", lunMonth), "UTF-8"));
         urlBuilder.append("&" + URLEncoder.encode("solDay", "UTF-8") + "=" + URLEncoder.encode(String.format("%02d", lunDay), "UTF-8"));
@@ -92,7 +87,6 @@ public class MaridDBSave {
             rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         } else {
             rd = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
-            //해당 부분에 오류 발생했을 시 txt에 저장하는 방법 강구
         }
 
         StringBuilder sb = new StringBuilder();
@@ -121,7 +115,7 @@ public class MaridDBSave {
             Long solDay = item.getLong("solDay");
             Long solMonth = item.getLong("solMonth");
             Long solYear = item.getLong("solYear");
-            Long solJd = item.getLong("solJd"); //율리우스 적일 추가
+            Long solJd = item.getLong("solJd");
             String lunIljin = item.getString("lunIljin");
             String lunWolgeon = item.getString("lunWolgeon");
             String lunSecha = item.getString("lunSecha");
@@ -141,20 +135,13 @@ public class MaridDBSave {
 
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println(e.toString());
-//            System.out.println("연도" + lunYear + "\n");
-//            System.out.println("월" + lunMonth + "\n");
-//            System.out.println("알" + lunDay + "\n");            //해당 부분에도 추출해서 저장\
-            //멈췄다가 다시 스케줄러 시작하고 다시 가동 해당 부분에 스케줄러에 대한 함수 적용 delay끝나느거
-            TimeUnit.DAYS.toDays(1);
-//            TimeUnit.DAYS.sleep(6);
-
-        }
-        //sleep추가(0814 회사에서 추가)
-        finally{
-            TimeUnit.MILLISECONDS.toMillis(1000);
-
+            System.out.println("Parse Error: " + e.getMessage());
+        } finally {
+            try {
+                TimeUnit.MILLISECONDS.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
-
 }
