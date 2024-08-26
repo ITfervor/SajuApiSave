@@ -37,7 +37,7 @@ public class ApiExplorer {
     public static void main(String[] args) throws IOException {
         int INDENT_FACTOR = 4;
         StringBuilder urlBuilder = new StringBuilder("http://apis.data.go.kr/B090041/openapi/service/LrsrCldInfoService/getLunCalInfo"); /*URL*/
-        urlBuilder.append("?" + URLEncoder.encode("serviceKey", "UTF-8") + "=n7N%2B3aBxNLrufQBhQy3Qjoil4plFypWhh5t8Kezj0DMwpL3zpSfVPUdPewyJH1UxwHwpaohOc%2FxFy72%2Bg93c4g%3D%3D"); /*Service Key*/
+        urlBuilder.append("?" + URLEncoder.encode("serviceKey", "UTF-8") + ""); /*Service Key*/
         urlBuilder.append("&" + URLEncoder.encode("solYear", "UTF-8") + "=" + URLEncoder.encode("1997", "UTF-8")); /*연*/
         urlBuilder.append("&" + URLEncoder.encode("solMonth", "UTF-8") + "=" + URLEncoder.encode("04", "UTF-8")); /*월*/
         urlBuilder.append("&" + URLEncoder.encode("solDay", "UTF-8") + "=" + URLEncoder.encode("01", "UTF-8")); /*일*/

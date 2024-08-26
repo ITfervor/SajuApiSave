@@ -15,6 +15,3 @@ spring:
     hibernate:
       ddl-auto: update
 
-api:
-  key: n7N%2B3aBxNLrufQBhQy3Qjoil4plFypWhh5t8Kezj0DMwpL3zpSfVPUdPewyJH1UxwHwpaohOc%2FxFy72%2Bg93c4g%3D%3D
-  serviceKey: n7N%2B3aBxNLrufQBhQy3Qjoil4plFypWhh5t8Kezj0DMwpL3zpSfVPUdPewyJH1UxwHwpaohOc%2FxFy72%2Bg93c4g%3D%3D
