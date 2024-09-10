@@ -1,5 +1,6 @@
 package com.example.dbsave;
 
+import jakarta.transaction.Transactional;
 import org.json.JSONObject;
 import org.json.XML;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,9 +30,9 @@ public class MaridDBSave {
     private SajuInfoRepository sajuInfoRepository;
 
     public void start() throws IOException {
-        for (int i = 1950; i < 2050; i++) { //10년씩 끊어서 데이터 받아오기
+        for (int i = 2015; i < 2024; i++) { //10년씩 끊어서 데이터 받아오기
             fetchAndSaveYearData(i);
-            System.out.println("저장시작연도 " + i);
+            System.out.println("저장완료연도 " + i);
         }
     }
 
@@ -42,16 +43,23 @@ public class MaridDBSave {
                 fetchDataAndAddToList(lunYear, lunMonth, lunDay);
             }
         }
+        saveDataToDb();
+    }
+
+    private void saveDataToDb() {
         try {
-            sajuInfoRepository.saveAll(sajuDbList);
-            sajuInfoRepository.flush();  // 즉시 데이터베이스에 반영 -> 확인 해보기
+            if (!sajuDbList.isEmpty()) {
+                sajuInfoRepository.saveAll(sajuDbList);
+                sajuDbList.clear();  // 리스트 비우기
+                System.out.println("DB 저장 완료");
+            }
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("Save Error: " + e.getMessage());
         }
     }
 
-    private int getMaxDaysInMonth(int year, int month) {
+    public int getMaxDaysInMonth(int year, int month) {
         if (month == 2) {
             return (year % 4 == 0) ? 29 : 28;
         } else if (month == 4 || month == 6 || month == 9 || month == 11) {
@@ -61,22 +69,22 @@ public class MaridDBSave {
         }
     }
 
-    private void fetchDataAndAddToList(int lunYear, int lunMonth, int lunDay) throws IOException {
+    public void fetchDataAndAddToList(int lunYear, int lunMonth, int lunDay) throws IOException {
         String url = buildUrl(lunYear, lunMonth, lunDay);
         String jsonResponse = getApiResponse(url);
         parseAndAddToDbList(jsonResponse);
     }
 
-    private String buildUrl(int lunYear, int lunMonth, int lunDay) throws UnsupportedEncodingException {
+    public String buildUrl(int lunYear, int lunMonth, int lunDay) throws UnsupportedEncodingException {
         StringBuilder urlBuilder = new StringBuilder("http://apis.data.go.kr/B090041/openapi/service/LrsrCldInfoService/getLunCalInfo");
-        urlBuilder.append("?" + URLEncoder.encode("serviceKey", "UTF-8") + "=" + URLEncoder.encode(apiKey, "UTF-8"));
+        urlBuilder.append("?" + URLEncoder.encode("serviceKey", "UTF-8") + "=" + apiKey);
         urlBuilder.append("&" + URLEncoder.encode("solYear", "UTF-8") + "=" + URLEncoder.encode(String.format("%d", lunYear), "UTF-8"));
         urlBuilder.append("&" + URLEncoder.encode("solMonth", "UTF-8") + "=" + URLEncoder.encode(String.format("%02d", lunMonth), "UTF-8"));
         urlBuilder.append("&" + URLEncoder.encode("solDay", "UTF-8") + "=" + URLEncoder.encode(String.format("%02d", lunDay), "UTF-8"));
         return urlBuilder.toString();
     }
 
-    private String getApiResponse(String urlString) throws IOException {
+    public String getApiResponse(String urlString) throws IOException {
         URL url = new URL(urlString);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
@@ -100,48 +108,111 @@ public class MaridDBSave {
         return sb.toString();
     }
 
-    private void parseAndAddToDbList(String jsonResponse) {
+    @Transactional
+    public void parseAndAddToDbList(String jsonResponse) {
         int INDENT_FACTOR = 4;
         JSONObject xmlJSONObj = XML.toJSONObject(jsonResponse);
         String jsonPrettyPrintString = xmlJSONObj.toString(INDENT_FACTOR);
 
-        try {
-            JSONObject jsonObject = new JSONObject(jsonPrettyPrintString);
-            JSONObject item = jsonObject.getJSONObject("response")
-                    .getJSONObject("body")
-                    .getJSONObject("items")
-                    .getJSONObject("item");
+        boolean success = false;
 
-            Long solDay = item.getLong("solDay");
-            Long solMonth = item.getLong("solMonth");
-            Long solYear = item.getLong("solYear");
-            Long solJd = item.getLong("solJd");
-            String lunIljin = item.getString("lunIljin");
-            String lunWolgeon = item.getString("lunWolgeon");
-            String lunSecha = item.getString("lunSecha");
-            System.out.println(lunIljin);
-
-            SajuDb sajuDb = SajuDb.builder()
-                    .lunIljin(lunIljin)
-                    .lunWolgeon(lunWolgeon)
-                    .lunSecha(lunSecha)
-                    .solDay(String.format("%d", solDay))
-                    .solMonth(String.format("%d", solMonth))
-                    .solYear(String.format("%d", solYear))
-                    .solJd(String.format("%d", solJd))
-                    .build();
-
-            sajuDbList.add(sajuDb);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("Parse Error: " + e.getMessage());
-        } finally {
+        while (!success) {
             try {
-                TimeUnit.MILLISECONDS.sleep(1000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                JSONObject jsonObject = new JSONObject(jsonPrettyPrintString);
+                JSONObject item = jsonObject.getJSONObject("response")
+                        .getJSONObject("body")
+                        .getJSONObject("items")
+                        .getJSONObject("item");
+
+                Long solDay = item.getLong("solDay");
+                Long solMonth = item.getLong("solMonth");
+                Long solYear = item.getLong("solYear");
+                Long solJd = item.getLong("solJd");
+                String lunIljin = item.getString("lunIljin");
+                String lunWolgeon = item.getString("lunWolgeon");
+                String lunSecha = item.getString("lunSecha");
+                System.out.println(lunIljin);
+
+                SajuDb sajuDb = SajuDb.builder()
+                        .lunIljin(lunIljin)
+                        .lunWolgeon(lunWolgeon)
+                        .lunSecha(lunSecha)
+                        .solDay(String.format("%d", solDay))
+                        .solMonth(String.format("%d", solMonth))
+                        .solYear(String.format("%d", solYear))
+                        .solJd(String.format("%d", solJd))
+                        .build();
+
+                sajuDbList.add(sajuDb);
+
+                success = true;  // 성공적으로 완료되었으므로 루프 탈출
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println("Parse Error: " + e.getMessage());
+
+                try {
+                    System.out.println("오류 발생, 1일 후 다시 시도합니다.");
+//                    TimeUnit.DAYS.sleep(1);  // 하루 대기
+                    TimeUnit.HOURS.sleep(16);  // 하루 대기
+                } catch (InterruptedException interruptedException) {
+                    Thread.currentThread().interrupt();
+                    System.out.println("스레드가 인터럽트되었습니다. 재시도 중지.");
+                    break;  // 스레드가 인터럽트되었을 경우 루프를 빠져나옵니다.
+                }
             }
+        }
+
+        try {
+            TimeUnit.MILLISECONDS.sleep(500);  // 일반적인 대기 시간
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }
+
+
+//    private void parseAndAddToDbList(String jsonResponse) {
+//        int INDENT_FACTOR = 4;
+//        JSONObject xmlJSONObj = XML.toJSONObject(jsonResponse);
+//        String jsonPrettyPrintString = xmlJSONObj.toString(INDENT_FACTOR);
+//
+//        try {
+//            JSONObject jsonObject = new JSONObject(jsonPrettyPrintString);
+//            JSONObject item = jsonObject.getJSONObject("response")
+//                    .getJSONObject("body")
+//                    .getJSONObject("items")
+//                    .getJSONObject("item");
+//
+//            Long solDay = item.getLong("solDay");
+//            Long solMonth = item.getLong("solMonth");
+//            Long solYear = item.getLong("solYear");
+//            Long solJd = item.getLong("solJd");
+//            String lunIljin = item.getString("lunIljin");
+//            String lunWolgeon = item.getString("lunWolgeon");
+//            String lunSecha = item.getString("lunSecha");
+//            System.out.println(lunIljin);
+//
+//            SajuDb sajuDb = SajuDb.builder()
+//                    .lunIljin(lunIljin)
+//                    .lunWolgeon(lunWolgeon)
+//                    .lunSecha(lunSecha)
+//                    .solDay(String.format("%d", solDay))
+//                    .solMonth(String.format("%d", solMonth))
+//                    .solYear(String.format("%d", solYear))
+//                    .solJd(String.format("%d", solJd))
+//                    .build();
+//
+//            sajuDbList.add(sajuDb);
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            System.out.println("Parse Error: " + e.getMessage());
+//        } finally {
+//            try {
+//                TimeUnit.MILLISECONDS.sleep(1000);
+//            } catch (InterruptedException e) {
+//                Thread.currentThread().interrupt();
+//            }
+//        }
+//    }
