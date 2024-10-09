@@ -30,7 +30,7 @@ public class MaridDBSave {
     private SajuInfoRepository sajuInfoRepository;
 
     public void start() throws IOException {
-        for (int i = 2015; i < 2024; i++) { //10년씩 끊어서 데이터 받아오기
+        for (int i = 2017; i < 2035; i++) { //10년씩 끊어서 데이터 받아오기
             fetchAndSaveYearData(i);
             System.out.println("저장완료연도 " + i);
         }
